@@ -51,6 +51,9 @@ lmax_len = lmax # store maps with this lmax
 cl_unl = camb_clfile(opj(cls_dir, 'camb_unlensed_cls.dat'))
 Lmax = len(cl_unl['tt']) - 1
 print('unlensed lmax : ',Lmax)
+# Read the input convergence spectra
+data = np.loadtxt(opj(cls_dir,'cl_kk_lmax_7000.dat'))
+clkk = data[0] if data.ndim > 1 else data  
 
 pixwin = hp.pixwin(2048, lmax=synlmax)
 
@@ -78,14 +81,17 @@ for sim in range(Nsim_start+myid, Nsim_end+1, nproc):
         del TQU
         
     print("loading lensing field")
-    kappa = hp.read_map(opj(kk_path, 'map_kk_nside_2048_fullsky_nsim_%d.fits') %(sim), field=0)
-    klm = hp.map2alm(kappa, synlmax, iter=3, use_pixel_weights=True)
+    #kappa = hp.read_map(opj(kk_path, 'map_kk_nside_2048_fullsky_nsim_%d.fits') %(sim), field=0)
+    #klm = hp.map2alm(kappa, synlmax, iter=3, use_pixel_weights=True)
+    #klm = hp.almxfl(klm, 1/pixwin, inplace=False)  # divided by pixel window function
+    
+    klm = hp.synalm(clkk, lmax=synlmax)
     
     wll = np.zeros(synlmax+1)
     wll[2:] = 2/np.sqrt(np.arange(2,synlmax+1)*np.arange(3,synlmax+2))
     
     # obtain deflection field for Lenspyx
-    dlm = hp.almxfl(klm, wll / pixwin, inplace=False)  # divided by pixel window
+    dlm = hp.almxfl(klm, wll, inplace=False)
     
     del klm , wll, kappa    
      
